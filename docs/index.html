@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <style>
     :root {
       --green:   #00ff87;
@@ -254,6 +255,88 @@
       text-shadow: 0 0 8px var(--yellow);
     }
 
+    /* ── QR section ──────────────────────────────────────────────── */
+    .qr-section {
+      width: min(700px, 92vw);
+      margin-top: 28px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .qr-title {
+      font-size: 0.55rem;
+      color: var(--yellow);
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 10px var(--yellow);
+      margin-bottom: 6px;
+    }
+
+    .qr-subtitle {
+      font-size: 0.38rem;
+      color: #2a6a7a;
+      letter-spacing: 0.08em;
+      margin-bottom: 28px;
+      line-height: 2;
+    }
+
+    .qr-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    @media (min-width: 520px) {
+      .qr-inner { flex-direction: row; justify-content: center; align-items: center; gap: 40px; }
+    }
+
+    /* The QR canvas gets injected here */
+    #qr-canvas {
+      padding: 12px;
+      background: #fff;
+      border: 3px solid var(--yellow);
+      box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--yellow), 0 0 24px rgba(255,230,0,0.3);
+      image-rendering: pixelated;
+    }
+
+    .qr-text {
+      text-align: left;
+    }
+
+    .qr-text .join-label {
+      font-size: 0.38rem;
+      color: #2a6a7a;
+      letter-spacing: 0.1em;
+      margin-bottom: 14px;
+    }
+
+    .qr-text .join-btn {
+      display: inline-block;
+      font-family: "Press Start 2P", monospace;
+      font-size: 0.5rem;
+      color: var(--bg);
+      background: var(--yellow);
+      padding: 14px 20px;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    .qr-text .join-btn:hover {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+    }
+
+    .qr-text .join-url {
+      display: block;
+      margin-top: 14px;
+      font-size: 0.32rem;
+      color: #2a6a7a;
+      word-break: break-all;
+      letter-spacing: 0.04em;
+    }
+
     /* ── Footer ──────────────────────────────────────────────────── */
     footer {
       margin: 32px 0 40px;
@@ -361,6 +444,22 @@
 <div id="chart-card" class="chart-card px-box hidden">
   <div class="chart-title">▌ 24-HOUR HISTORY</div>
   <canvas id="chart" height="200"></canvas>
+</div>
+
+<!-- QR Code -->
+<div class="qr-section px-box">
+  <div class="qr-title">▌ JOIN THE ALERT GROUP</div>
+  <div class="qr-subtitle">SCAN TO GET WATER LEVEL WARNINGS ON TELEGRAM</div>
+  <div class="qr-inner">
+    <canvas id="qr-canvas"></canvas>
+    <div class="qr-text">
+      <div class="join-label">TAP OR SCAN TO JOIN:</div>
+      <a class="join-btn" href="https://t.me/+Xc6rKLRb0wsxNWI0" target="_blank">
+        ▶ JOIN ON TELEGRAM
+      </a>
+      <span class="join-url">t.me/+Xc6rKLRb0wsxNWI0</span>
+    </div>
+  </div>
 </div>
 
 <footer id="footer" class="hidden">
@@ -556,6 +655,13 @@
 
   load();
   setInterval(load, 10 * 60 * 1000);
+
+  // Generate QR code
+  QRCode.toCanvas(
+    document.getElementById("qr-canvas"),
+    "https://t.me/+Xc6rKLRb0wsxNWI0",
+    { width: 180, margin: 1, color: { dark: "#000000", light: "#ffffff" } }
+  );
 </script>
 </body>
 </html>
