@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --green:   #00ff87;
@@ -17,7 +17,6 @@
       --purple:  #c040fb;
       --bg:      #050a0f;
       --panel:   #0a1520;
-      --border:  #1a3a5c;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,7 +32,7 @@
       overflow-x: hidden;
     }
 
-    /* ── Scanlines overlay ─────────────────────────────────────────── */
+    /* Scanlines — kept below QR elements */
     body::after {
       content: "";
       position: fixed;
@@ -42,21 +41,20 @@
         0deg,
         transparent,
         transparent 2px,
-        rgba(0,0,0,0.18) 2px,
-        rgba(0,0,0,0.18) 4px
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 4px
       );
       pointer-events: none;
-      z-index: 999;
+      z-index: 10;
     }
 
-    /* ── Pixel border helper ───────────────────────────────────────── */
     .px-box {
       border: 3px solid var(--cyan);
       box-shadow:
         0 0 0 3px var(--bg),
         0 0 0 6px var(--cyan),
-        0 0 24px rgba(0,229,255,0.25),
-        inset 0 0 16px rgba(0,229,255,0.06);
+        0 0 24px rgba(0,229,255,0.2),
+        inset 0 0 16px rgba(0,229,255,0.04);
       background: var(--panel);
     }
 
@@ -75,9 +73,7 @@
       line-height: 1.6;
     }
 
-    .blink {
-      animation: blink 1.2s step-end infinite;
-    }
+    .blink { animation: blink 1.2s step-end infinite; }
     @keyframes blink { 50% { opacity: 0; } }
 
     header .sub {
@@ -88,18 +84,33 @@
       line-height: 2;
     }
 
-    /* ── Divider ──────────────────────────────────────────────────── */
     .divider {
-      width: min(700px, 92vw);
+      width: min(860px, 92vw);
       height: 3px;
       background: linear-gradient(90deg, transparent, var(--cyan), transparent);
       margin: 28px 0;
       box-shadow: 0 0 10px var(--cyan);
     }
 
-    /* ── Main level display ───────────────────────────────────────── */
+    /* ── TOP ROW: level + QR side by side ────────────────────────── */
+    .top-row {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: min(860px, 92vw);
+      align-items: stretch;
+    }
+
+    @media (min-width: 680px) {
+      .top-row {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+    }
+
+    /* ── Level card ───────────────────────────────────────────────── */
     .level-card {
-      width: min(560px, 92vw);
+      flex: 1;
       padding: 32px 24px 28px;
       text-align: center;
     }
@@ -112,7 +123,7 @@
     }
 
     .level-value {
-      font-size: clamp(3.5rem, 12vw, 6rem);
+      font-size: clamp(3.2rem, 10vw, 5.5rem);
       line-height: 1;
       color: var(--green);
       text-shadow: 0 0 20px var(--green), 0 0 60px rgba(0,255,135,0.3);
@@ -120,9 +131,9 @@
     }
 
     .level-unit {
-      font-size: clamp(1rem, 3vw, 1.4rem);
+      font-size: clamp(0.9rem, 2.5vw, 1.3rem);
       color: #2a6a7a;
-      margin-left: 8px;
+      margin-left: 6px;
     }
 
     .status-row {
@@ -140,28 +151,12 @@
       box-shadow: 0 0 10px rgba(0,255,135,0.3);
       transition: all 0.5s;
     }
-
-    .status-chip.high {
-      border-color: var(--red);
-      color: var(--red);
-      box-shadow: 0 0 14px rgba(255,60,95,0.5);
-      animation: pulse-red 1s ease-in-out infinite;
-    }
-    .status-chip.low {
-      border-color: var(--purple);
-      color: var(--purple);
-      box-shadow: 0 0 14px rgba(192,64,251,0.5);
-      animation: pulse-purple 1s ease-in-out infinite;
-    }
-
+    .status-chip.high   { border-color: var(--red);    color: var(--red);    box-shadow: 0 0 14px rgba(255,60,95,0.5);   animation: pulse-red    1s ease-in-out infinite; }
+    .status-chip.low    { border-color: var(--purple);  color: var(--purple); box-shadow: 0 0 14px rgba(192,64,251,0.5);  animation: pulse-purple 1s ease-in-out infinite; }
     @keyframes pulse-red    { 50% { box-shadow: 0 0 28px rgba(255,60,95,0.8);   } }
     @keyframes pulse-purple { 50% { box-shadow: 0 0 28px rgba(192,64,251,0.8);  } }
 
-    /* ── Pixel gauge ──────────────────────────────────────────────── */
-    .gauge-section {
-      margin-top: 28px;
-      width: 100%;
-    }
+    .gauge-section { margin-top: 28px; width: 100%; }
 
     .gauge-labels {
       display: flex;
@@ -176,10 +171,7 @@
       border: 2px solid #1a3a5c;
       background: #050f18;
       position: relative;
-      image-rendering: pixelated;
     }
-
-    /* threshold lines */
     .gauge-outer::before,
     .gauge-outer::after {
       content: "";
@@ -195,11 +187,7 @@
     .gauge-fill {
       position: absolute;
       top: 2px; bottom: 2px;
-      background: repeating-linear-gradient(
-        90deg,
-        var(--green) 0px, var(--green) 6px,
-        transparent  6px, transparent  8px
-      );
+      background: repeating-linear-gradient(90deg, var(--green) 0px, var(--green) 6px, transparent 6px, transparent 8px);
       transition: left 0.6s, width 0.6s, background 0.5s;
     }
 
@@ -213,11 +201,90 @@
       transform: translateX(-50%);
     }
 
+    /* ── QR card ──────────────────────────────────────────────────── */
+    .qr-card {
+      width: min(260px, 92vw);
+      flex-shrink: 0;
+      padding: 24px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      border-color: var(--yellow) !important;
+      box-shadow:
+        0 0 0 3px var(--bg),
+        0 0 0 6px var(--yellow),
+        0 0 24px rgba(255,230,0,0.2),
+        inset 0 0 16px rgba(255,230,0,0.04) !important;
+    }
+
+    .qr-heading {
+      font-size: 0.42rem;
+      color: var(--yellow);
+      text-shadow: 0 0 8px var(--yellow);
+      letter-spacing: 0.1em;
+      line-height: 1.8;
+    }
+
+    /* QR image sits above scanlines */
+    #qr-img-wrap {
+      position: relative;
+      z-index: 20;
+      padding: 10px;
+      background: #fff;
+      border: 2px solid var(--yellow);
+      box-shadow: 0 0 16px rgba(255,230,0,0.5);
+    }
+
+    #qr-img-wrap img,
+    #qr-img-wrap canvas {
+      display: block;
+    }
+
+    .join-btn {
+      display: block;
+      width: 100%;
+      font-family: "Press Start 2P", monospace;
+      font-size: 0.42rem;
+      color: var(--bg);
+      background: var(--yellow);
+      padding: 12px 10px;
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      text-align: center;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+      transition: transform 0.1s, box-shadow 0.1s;
+      line-height: 1.8;
+    }
+    .join-btn:hover { transform: translate(2px,2px); box-shadow: 2px 2px 0 rgba(0,0,0,0.6); }
+
+    .join-url {
+      font-size: 0.3rem;
+      color: #2a6a7a;
+      word-break: break-all;
+      letter-spacing: 0.04em;
+      line-height: 1.8;
+    }
+
+    /* ── Stats row ────────────────────────────────────────────────── */
+    .stats-row {
+      width: min(860px, 92vw);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .stat-box { padding: 16px 12px; text-align: center; }
+    .stat-label { font-size: 0.38rem; color: #2a6a7a; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .stat-val   { font-size: 0.75rem; color: var(--yellow); text-shadow: 0 0 8px var(--yellow); }
+
     /* ── Chart ────────────────────────────────────────────────────── */
     .chart-card {
-      width: min(700px, 92vw);
+      width: min(860px, 92vw);
       padding: 24px 20px 20px;
-      margin-top: 32px;
+      margin-top: 20px;
     }
 
     .chart-title {
@@ -226,115 +293,6 @@
       letter-spacing: 0.12em;
       margin-bottom: 18px;
       text-shadow: 0 0 8px var(--cyan);
-    }
-
-    /* ── Stats row ────────────────────────────────────────────────── */
-    .stats-row {
-      width: min(700px, 92vw);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin-top: 20px;
-    }
-
-    .stat-box {
-      padding: 16px 12px;
-      text-align: center;
-    }
-
-    .stat-label {
-      font-size: 0.38rem;
-      color: #2a6a7a;
-      letter-spacing: 0.1em;
-      margin-bottom: 10px;
-    }
-
-    .stat-val {
-      font-size: 0.75rem;
-      color: var(--yellow);
-      text-shadow: 0 0 8px var(--yellow);
-    }
-
-    /* ── QR section ──────────────────────────────────────────────── */
-    .qr-section {
-      width: min(700px, 92vw);
-      margin-top: 28px;
-      padding: 32px 24px;
-      text-align: center;
-    }
-
-    .qr-title {
-      font-size: 0.55rem;
-      color: var(--yellow);
-      letter-spacing: 0.12em;
-      text-shadow: 0 0 10px var(--yellow);
-      margin-bottom: 6px;
-    }
-
-    .qr-subtitle {
-      font-size: 0.38rem;
-      color: #2a6a7a;
-      letter-spacing: 0.08em;
-      margin-bottom: 28px;
-      line-height: 2;
-    }
-
-    .qr-inner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-    }
-
-    @media (min-width: 520px) {
-      .qr-inner { flex-direction: row; justify-content: center; align-items: center; gap: 40px; }
-    }
-
-    /* The QR canvas gets injected here */
-    #qr-canvas {
-      padding: 12px;
-      background: #fff;
-      border: 3px solid var(--yellow);
-      box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--yellow), 0 0 24px rgba(255,230,0,0.3);
-      image-rendering: pixelated;
-    }
-
-    .qr-text {
-      text-align: left;
-    }
-
-    .qr-text .join-label {
-      font-size: 0.38rem;
-      color: #2a6a7a;
-      letter-spacing: 0.1em;
-      margin-bottom: 14px;
-    }
-
-    .qr-text .join-btn {
-      display: inline-block;
-      font-family: "Press Start 2P", monospace;
-      font-size: 0.5rem;
-      color: var(--bg);
-      background: var(--yellow);
-      padding: 14px 20px;
-      text-decoration: none;
-      letter-spacing: 0.08em;
-      box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
-      transition: transform 0.1s, box-shadow 0.1s;
-    }
-
-    .qr-text .join-btn:hover {
-      transform: translate(2px, 2px);
-      box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
-    }
-
-    .qr-text .join-url {
-      display: block;
-      margin-top: 14px;
-      font-size: 0.32rem;
-      color: #2a6a7a;
-      word-break: break-all;
-      letter-spacing: 0.04em;
     }
 
     /* ── Footer ──────────────────────────────────────────────────── */
@@ -347,10 +305,7 @@
     }
 
     /* ── Spinner / Error ─────────────────────────────────────────── */
-    #loading {
-      margin-top: 100px;
-      text-align: center;
-    }
+    #loading { margin-top: 100px; text-align: center; }
 
     .pixel-spinner {
       display: inline-block;
@@ -362,11 +317,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .loading-text {
-      font-size: 0.5rem;
-      color: #2a6a7a;
-      animation: blink 1s step-end infinite;
-    }
+    .loading-text { font-size: 0.5rem; color: #2a6a7a; animation: blink 1s step-end infinite; }
 
     #error-box {
       margin-top: 60px;
@@ -380,7 +331,6 @@
       display: none;
     }
 
-    /* hide until loaded */
     .hidden { display: none !important; }
   </style>
 </head>
@@ -400,28 +350,43 @@
 </div>
 
 <!-- Error -->
-<div id="error-box" class="px-box">
-  !! DATA ERROR !!</br>COULD NOT REACH DMI API.</br>PLEASE REFRESH.
-</div>
+<div id="error-box">!! DATA ERROR !!<br>COULD NOT REACH DMI API.<br>PLEASE REFRESH.</div>
 
-<!-- Main card -->
-<div id="level-card" class="level-card px-box hidden">
-  <div class="level-label">CURRENT SEA LEVEL</div>
-  <div>
-    <span class="level-value" id="level-val">--</span><span class="level-unit">CM</span>
-  </div>
-  <div class="status-row">
-    <div class="status-chip" id="status-chip">-- LOADING --</div>
-  </div>
-  <div class="gauge-section">
-    <div class="gauge-labels">
-      <span>-90</span><span>-60</span><span>-30</span><span>0</span><span>+30</span><span>+60</span><span>+90</span>
+<!-- TOP ROW: Level card + QR card -->
+<div class="top-row hidden" id="top-row">
+
+  <!-- Level card -->
+  <div class="level-card px-box">
+    <div class="level-label">CURRENT SEA LEVEL</div>
+    <div>
+      <span class="level-value" id="level-val">--</span><span class="level-unit">CM</span>
     </div>
-    <div class="gauge-outer">
-      <div class="gauge-fill" id="gauge-fill"></div>
-      <div class="gauge-needle" id="gauge-needle"></div>
+    <div class="status-row">
+      <div class="status-chip" id="status-chip">-- LOADING --</div>
+    </div>
+    <div class="gauge-section">
+      <div class="gauge-labels">
+        <span>-90</span><span>-60</span><span>-30</span><span>0</span><span>+30</span><span>+60</span><span>+90</span>
+      </div>
+      <div class="gauge-outer">
+        <div class="gauge-fill" id="gauge-fill"></div>
+        <div class="gauge-needle" id="gauge-needle"></div>
+      </div>
     </div>
   </div>
+
+  <!-- QR card -->
+  <div class="qr-card px-box">
+    <div class="qr-heading">▌ JOIN THE<br>ALERT GROUP</div>
+    <div id="qr-img-wrap">
+      <div id="qr-code"></div>
+    </div>
+    <a class="join-btn" href="https://t.me/+Xc6rKLRb0wsxNWI0" target="_blank">
+      ▶ JOIN ON TELEGRAM
+    </a>
+    <span class="join-url">t.me/+Xc6rKLRb0wsxNWI0</span>
+  </div>
+
 </div>
 
 <!-- Stats -->
@@ -444,22 +409,6 @@
 <div id="chart-card" class="chart-card px-box hidden">
   <div class="chart-title">▌ 24-HOUR HISTORY</div>
   <canvas id="chart" height="200"></canvas>
-</div>
-
-<!-- QR Code -->
-<div class="qr-section px-box">
-  <div class="qr-title">▌ JOIN THE ALERT GROUP</div>
-  <div class="qr-subtitle">SCAN TO GET WATER LEVEL WARNINGS ON TELEGRAM</div>
-  <div class="qr-inner">
-    <canvas id="qr-canvas"></canvas>
-    <div class="qr-text">
-      <div class="join-label">TAP OR SCAN TO JOIN:</div>
-      <a class="join-btn" href="https://t.me/+Xc6rKLRb0wsxNWI0" target="_blank">
-        ▶ JOIN ON TELEGRAM
-      </a>
-      <span class="join-url">t.me/+Xc6rKLRb0wsxNWI0</span>
-    </div>
-  </div>
 </div>
 
 <footer id="footer" class="hidden">
@@ -490,7 +439,6 @@
 
   async function fetchHistory() {
     const data = await apiFetch({ stationId: STATION, parameterId: "sealev_dvr", limit: "144" });
-    // Sort oldest → newest for the chart
     return data.features.sort((a, b) =>
       new Date(a.properties.observed) - new Date(b.properties.observed)
     );
@@ -504,15 +452,11 @@
       return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     });
     const values = features.map(f => f.properties.value);
-    const high24 = Math.max(...values);
-    const low24  = Math.min(...values);
-
-    document.getElementById("stat-high").textContent = high24.toFixed(1) + " CM";
-    document.getElementById("stat-low").textContent  = low24.toFixed(1)  + " CM";
+    document.getElementById("stat-high").textContent = Math.max(...values).toFixed(1) + " CM";
+    document.getElementById("stat-low").textContent  = Math.min(...values).toFixed(1) + " CM";
 
     const ctx = document.getElementById("chart").getContext("2d");
     if (chartInst) chartInst.destroy();
-
     chartInst = new Chart(ctx, {
       type: "line",
       data: {
@@ -579,11 +523,8 @@
 
   function updateGauge(cm) {
     const pct = Math.max(0, Math.min(100, (cm - GAUGE_MIN) / (GAUGE_MAX - GAUGE_MIN) * 100));
-    const needle = document.getElementById("gauge-needle");
-    const fill   = document.getElementById("gauge-fill");
-    needle.style.left = pct + "%";
-
-    // Fill from centre (50%) to needle
+    document.getElementById("gauge-needle").style.left = pct + "%";
+    const fill = document.getElementById("gauge-fill");
     const centre = 50;
     if (pct >= centre) {
       fill.style.left  = centre + "%";
@@ -595,40 +536,35 @@
   }
 
   function applyStatus(cm) {
-    const el  = document.getElementById("level-val");
+    const el   = document.getElementById("level-val");
     const chip = document.getElementById("status-chip");
-    const fill  = document.getElementById("gauge-fill");
-
+    const fill = document.getElementById("gauge-fill");
     chip.className = "status-chip";
-
     if (cm > THRESHOLD) {
-      el.style.color      = "var(--red)";
+      el.style.color = "var(--red)";
       el.style.textShadow = "0 0 20px var(--red), 0 0 60px rgba(255,60,95,0.3)";
       fill.style.background = "repeating-linear-gradient(90deg, var(--red) 0px, var(--red) 6px, transparent 6px, transparent 8px)";
       chip.textContent = "!! LEVEL HIGH !!";
       chip.classList.add("high");
     } else if (cm < -THRESHOLD) {
-      el.style.color      = "var(--purple)";
+      el.style.color = "var(--purple)";
       el.style.textShadow = "0 0 20px var(--purple), 0 0 60px rgba(192,64,251,0.3)";
       fill.style.background = "repeating-linear-gradient(90deg, var(--purple) 0px, var(--purple) 6px, transparent 6px, transparent 8px)";
       chip.textContent = "!! LEVEL LOW !!";
       chip.classList.add("low");
     } else {
-      el.style.color      = "var(--green)";
+      el.style.color = "var(--green)";
       el.style.textShadow = "0 0 20px var(--green), 0 0 60px rgba(0,255,135,0.3)";
       fill.style.background = "repeating-linear-gradient(90deg, var(--green) 0px, var(--green) 6px, transparent 6px, transparent 8px)";
       chip.textContent = "▶ LEVEL NORMAL ◀";
     }
   }
 
-  function show(id) {
-    document.getElementById(id).classList.remove("hidden");
-  }
+  function show(id) { document.getElementById(id).classList.remove("hidden"); }
 
   async function load() {
     try {
       const [latest, history] = await Promise.all([fetchLatest(), fetchHistory()]);
-
       const cm = latest.properties.value;
       const ts = latest.properties.observed;
 
@@ -641,11 +577,10 @@
       document.getElementById("ts-page").textContent = "PAGE REFRESHED:   " + new Date().toLocaleTimeString().toUpperCase();
 
       document.getElementById("loading").style.display = "none";
-      show("level-card");
+      show("top-row");
       show("stats-row");
       show("chart-card");
       show("footer");
-
     } catch (err) {
       console.error(err);
       document.getElementById("loading").style.display = "none";
@@ -656,12 +591,15 @@
   load();
   setInterval(load, 10 * 60 * 1000);
 
-  // Generate QR code
-  QRCode.toCanvas(
-    document.getElementById("qr-canvas"),
-    "https://t.me/+Xc6rKLRb0wsxNWI0",
-    { width: 180, margin: 1, color: { dark: "#000000", light: "#ffffff" } }
-  );
+  // Generate QR code — qrcodejs renders an <img> inside the div
+  new QRCode(document.getElementById("qr-code"), {
+    text:          "https://t.me/+Xc6rKLRb0wsxNWI0",
+    width:         180,
+    height:        180,
+    colorDark:     "#000000",
+    colorLight:    "#ffffff",
+    correctLevel:  QRCode.CorrectLevel.H
+  });
 </script>
 </body>
 </html>
