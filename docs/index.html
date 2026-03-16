@@ -3,338 +3,425 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sea Level — Sluseholmen</title>
+  <title>SEA LEVEL — SLUSEHOLMEN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
+    :root {
+      --green:   #00ff87;
+      --cyan:    #00e5ff;
+      --yellow:  #ffe600;
+      --red:     #ff3c5f;
+      --purple:  #c040fb;
+      --bg:      #050a0f;
+      --panel:   #0a1520;
+      --border:  #1a3a5c;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0b1e2d;
-      color: #e0eaf3;
+      font-family: "Press Start 2P", monospace;
+      background: var(--bg);
+      color: var(--green);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
+      overflow-x: hidden;
     }
 
+    /* ── Scanlines overlay ─────────────────────────────────────────── */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.18) 2px,
+        rgba(0,0,0,0.18) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* ── Pixel border helper ───────────────────────────────────────── */
+    .px-box {
+      border: 3px solid var(--cyan);
+      box-shadow:
+        0 0 0 3px var(--bg),
+        0 0 0 6px var(--cyan),
+        0 0 24px rgba(0,229,255,0.25),
+        inset 0 0 16px rgba(0,229,255,0.06);
+      background: var(--panel);
+    }
+
+    /* ── Header ───────────────────────────────────────────────────── */
     header {
-      width: 100%;
-      padding: 28px 24px 0;
+      margin-top: 40px;
       text-align: center;
+      padding: 0 16px;
     }
 
     header h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      color: #8ecae6;
-      text-transform: uppercase;
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan), 0 0 30px rgba(0,229,255,0.4);
+      letter-spacing: 0.12em;
+      line-height: 1.6;
     }
 
-    header p.subtitle {
-      font-size: 0.85rem;
-      color: #5a8aa3;
-      margin-top: 4px;
+    .blink {
+      animation: blink 1.2s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    header .sub {
+      margin-top: 14px;
+      font-size: 0.5rem;
+      color: #2a6a7a;
+      letter-spacing: 0.08em;
+      line-height: 2;
     }
 
-    /* ── Current level card ─────────────────────────────────────────── */
-    .card {
-      margin-top: 36px;
-      background: #122636;
-      border: 1px solid #1e3a50;
-      border-radius: 16px;
-      padding: 36px 48px;
+    /* ── Divider ──────────────────────────────────────────────────── */
+    .divider {
+      width: min(700px, 92vw);
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      margin: 28px 0;
+      box-shadow: 0 0 10px var(--cyan);
+    }
+
+    /* ── Main level display ───────────────────────────────────────── */
+    .level-card {
+      width: min(560px, 92vw);
+      padding: 32px 24px 28px;
       text-align: center;
-      width: min(420px, 92vw);
     }
 
-    .card .label {
-      font-size: 0.8rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #5a8aa3;
-      margin-bottom: 8px;
+    .level-label {
+      font-size: 0.5rem;
+      color: #2a6a7a;
+      letter-spacing: 0.15em;
+      margin-bottom: 20px;
     }
 
-    .card .level {
-      font-size: 5rem;
-      font-weight: 700;
+    .level-value {
+      font-size: clamp(3.5rem, 12vw, 6rem);
       line-height: 1;
-      transition: color 0.4s;
+      color: var(--green);
+      text-shadow: 0 0 20px var(--green), 0 0 60px rgba(0,255,135,0.3);
+      transition: color 0.5s, text-shadow 0.5s;
     }
 
-    .card .unit {
-      font-size: 1.5rem;
-      color: #5a8aa3;
-      margin-left: 4px;
+    .level-unit {
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      color: #2a6a7a;
+      margin-left: 8px;
     }
 
-    .card .status-badge {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 6px 18px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
+    .status-row {
+      margin-top: 22px;
+      display: flex;
+      justify-content: center;
     }
 
-    .status-normal  { background: #1a4a2e; color: #4ade80; }
-    .status-high    { background: #4a1a1a; color: #f87171; }
-    .status-low     { background: #2a1a4a; color: #c084fc; }
+    .status-chip {
+      font-size: 0.55rem;
+      padding: 10px 20px;
+      border: 2px solid var(--green);
+      color: var(--green);
+      letter-spacing: 0.1em;
+      box-shadow: 0 0 10px rgba(0,255,135,0.3);
+      transition: all 0.5s;
+    }
 
-    /* ── Gauge bar ──────────────────────────────────────────────────── */
-    .gauge-wrap {
+    .status-chip.high {
+      border-color: var(--red);
+      color: var(--red);
+      box-shadow: 0 0 14px rgba(255,60,95,0.5);
+      animation: pulse-red 1s ease-in-out infinite;
+    }
+    .status-chip.low {
+      border-color: var(--purple);
+      color: var(--purple);
+      box-shadow: 0 0 14px rgba(192,64,251,0.5);
+      animation: pulse-purple 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse-red    { 50% { box-shadow: 0 0 28px rgba(255,60,95,0.8);   } }
+    @keyframes pulse-purple { 50% { box-shadow: 0 0 28px rgba(192,64,251,0.8);  } }
+
+    /* ── Pixel gauge ──────────────────────────────────────────────── */
+    .gauge-section {
       margin-top: 28px;
       width: 100%;
     }
 
-    .gauge-scale {
+    .gauge-labels {
       display: flex;
       justify-content: space-between;
-      font-size: 0.7rem;
-      color: #5a8aa3;
-      margin-bottom: 4px;
+      font-size: 0.38rem;
+      color: #2a6a7a;
+      margin-bottom: 8px;
     }
 
-    .gauge-track {
-      height: 10px;
-      background: #1e3a50;
-      border-radius: 99px;
+    .gauge-outer {
+      height: 22px;
+      border: 2px solid #1a3a5c;
+      background: #050f18;
       position: relative;
-      overflow: visible;
+      image-rendering: pixelated;
     }
 
-    /* threshold markers */
-    .gauge-track::before,
-    .gauge-track::after {
+    /* threshold lines */
+    .gauge-outer::before,
+    .gauge-outer::after {
       content: "";
       position: absolute;
-      top: -3px;
+      top: 0; bottom: 0;
       width: 2px;
-      height: 16px;
-      background: #f87171;
-      opacity: 0.6;
-      border-radius: 2px;
+      background: var(--red);
+      opacity: 0.7;
     }
-    /* −30 cm marker at 33.3% of the −90..+90 range */
-    .gauge-track::before { left: calc(50% - 30px / 90px * 50%); }
-    /* +30 cm marker */
-    .gauge-track::after  { left: calc(50% + 30px / 90px * 50%); }
+    .gauge-outer::before { left: calc(50% - 33.33%); }
+    .gauge-outer::after  { left: calc(50% + 33.33%); }
 
     .gauge-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.6s ease, background 0.4s;
       position: absolute;
-      top: 0;
+      top: 2px; bottom: 2px;
+      background: repeating-linear-gradient(
+        90deg,
+        var(--green) 0px, var(--green) 6px,
+        transparent  6px, transparent  8px
+      );
+      transition: left 0.6s, width 0.6s, background 0.5s;
     }
 
     .gauge-needle {
       position: absolute;
-      top: -5px;
-      width: 4px;
-      height: 20px;
-      background: #e0eaf3;
-      border-radius: 2px;
+      top: -4px; bottom: -4px;
+      width: 3px;
+      background: var(--yellow);
+      box-shadow: 0 0 8px var(--yellow);
+      transition: left 0.6s;
       transform: translateX(-50%);
-      transition: left 0.6s ease;
-      box-shadow: 0 0 6px rgba(255,255,255,0.4);
     }
 
-    /* ── Chart ──────────────────────────────────────────────────────── */
-    .chart-wrap {
-      margin-top: 28px;
-      background: #122636;
-      border: 1px solid #1e3a50;
-      border-radius: 16px;
-      padding: 24px 20px 16px;
+    /* ── Chart ────────────────────────────────────────────────────── */
+    .chart-card {
       width: min(700px, 92vw);
+      padding: 24px 20px 20px;
+      margin-top: 32px;
     }
 
-    .chart-wrap h2 {
-      font-size: 0.8rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #5a8aa3;
-      margin-bottom: 16px;
+    .chart-title {
+      font-size: 0.5rem;
+      color: var(--cyan);
+      letter-spacing: 0.12em;
+      margin-bottom: 18px;
+      text-shadow: 0 0 8px var(--cyan);
     }
 
-    /* ── Footer ─────────────────────────────────────────────────────── */
-    footer {
-      margin: 28px 0 32px;
-      font-size: 0.75rem;
-      color: #3a6070;
+    /* ── Stats row ────────────────────────────────────────────────── */
+    .stats-row {
+      width: min(700px, 92vw);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .stat-box {
+      padding: 16px 12px;
       text-align: center;
-      line-height: 1.8;
     }
 
-    footer a { color: #3a6070; }
+    .stat-label {
+      font-size: 0.38rem;
+      color: #2a6a7a;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
+    }
 
-    .error-msg {
-      margin-top: 36px;
-      background: #4a1a1a;
-      border: 1px solid #7f1d1d;
-      border-radius: 12px;
-      padding: 20px 28px;
-      color: #f87171;
-      font-size: 0.9rem;
+    .stat-val {
+      font-size: 0.75rem;
+      color: var(--yellow);
+      text-shadow: 0 0 8px var(--yellow);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    footer {
+      margin: 32px 0 40px;
+      text-align: center;
+      font-size: 0.38rem;
+      color: #1a3a5c;
+      line-height: 2.6;
+    }
+
+    /* ── Spinner / Error ─────────────────────────────────────────── */
+    #loading {
+      margin-top: 100px;
+      text-align: center;
+    }
+
+    .pixel-spinner {
+      display: inline-block;
+      width: 48px; height: 48px;
+      border: 4px solid #1a3a5c;
+      border-top-color: var(--cyan);
+      animation: spin 0.7s steps(8) infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 0.5rem;
+      color: #2a6a7a;
+      animation: blink 1s step-end infinite;
+    }
+
+    #error-box {
+      margin-top: 60px;
+      padding: 24px 28px;
       width: min(480px, 92vw);
       text-align: center;
+      font-size: 0.5rem;
+      color: var(--red);
+      border: 2px solid var(--red);
+      box-shadow: 0 0 14px rgba(255,60,95,0.4);
       display: none;
     }
 
-    #spinner {
-      margin-top: 80px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      color: #5a8aa3;
-      font-size: 0.9rem;
-    }
-
-    .spin {
-      width: 40px; height: 40px;
-      border: 3px solid #1e3a50;
-      border-top-color: #8ecae6;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* hide until loaded */
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Sea Level — Sluseholmen</h1>
-  <p class="subtitle">Copenhagen Harbor · DVR90 datum · updated every 10 min</p>
+  <h1>SEA LEVEL<br><span class="blink">▶</span> SLUSEHOLMEN <span class="blink">◀</span></h1>
+  <div class="sub">COPENHAGEN HARBOR · DVR90 DATUM · LIVE DATA FROM DMI</div>
 </header>
 
-<div id="spinner">
-  <div class="spin"></div>
-  <span>Loading data…</span>
+<div class="divider"></div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="pixel-spinner"></div>
+  <div class="loading-text">LOADING DATA...</div>
 </div>
 
-<div class="error-msg" id="error-msg">
-  Could not load data from DMI. Please try refreshing the page.
+<!-- Error -->
+<div id="error-box" class="px-box">
+  !! DATA ERROR !!</br>COULD NOT REACH DMI API.</br>PLEASE REFRESH.
 </div>
 
-<div class="card" id="card" style="display:none">
-  <div class="label">Current sea level</div>
+<!-- Main card -->
+<div id="level-card" class="level-card px-box hidden">
+  <div class="level-label">CURRENT SEA LEVEL</div>
   <div>
-    <span class="level" id="level-value">—</span><span class="unit">cm</span>
+    <span class="level-value" id="level-val">--</span><span class="level-unit">CM</span>
   </div>
-  <div class="status-badge" id="status-badge">—</div>
-
-  <div class="gauge-wrap">
-    <div class="gauge-scale">
-      <span>−90 cm</span>
-      <span>−30 cm</span>
-      <span>0 cm</span>
-      <span>+30 cm</span>
-      <span>+90 cm</span>
+  <div class="status-row">
+    <div class="status-chip" id="status-chip">-- LOADING --</div>
+  </div>
+  <div class="gauge-section">
+    <div class="gauge-labels">
+      <span>-90</span><span>-60</span><span>-30</span><span>0</span><span>+30</span><span>+60</span><span>+90</span>
     </div>
-    <div class="gauge-track" id="gauge-track">
+    <div class="gauge-outer">
+      <div class="gauge-fill" id="gauge-fill"></div>
       <div class="gauge-needle" id="gauge-needle"></div>
     </div>
   </div>
 </div>
 
-<div class="chart-wrap" id="chart-wrap" style="display:none">
-  <h2>Last 24 hours</h2>
-  <canvas id="chart" height="180"></canvas>
+<!-- Stats -->
+<div class="stats-row hidden" id="stats-row">
+  <div class="stat-box px-box">
+    <div class="stat-label">24H HIGH</div>
+    <div class="stat-val" id="stat-high">--</div>
+  </div>
+  <div class="stat-box px-box">
+    <div class="stat-label">24H LOW</div>
+    <div class="stat-val" id="stat-low">--</div>
+  </div>
+  <div class="stat-box px-box">
+    <div class="stat-label">THRESHOLD</div>
+    <div class="stat-val">±30 CM</div>
+  </div>
 </div>
 
-<footer id="footer" style="display:none">
-  <div>Data: <a href="http://opendataapi.dmi.dk" target="_blank">DMI Open Data API</a> · Station: Københavns Havn (30336)</div>
-  <div id="last-updated"></div>
+<!-- Chart -->
+<div id="chart-card" class="chart-card px-box hidden">
+  <div class="chart-title">▌ 24-HOUR HISTORY</div>
+  <canvas id="chart" height="200"></canvas>
+</div>
+
+<footer id="footer" class="hidden">
+  <div>DATA SOURCE: DMI OPEN DATA API · STATION: KØBENHAVNS HAVN (30336)</div>
+  <div id="ts-obs">LAST OBSERVATION: --</div>
+  <div id="ts-page">PAGE REFRESHED: --</div>
 </footer>
 
 <script>
-  const STATION_ID   = "30336";
-  const THRESHOLD_CM = 30;
-  const GAUGE_MIN    = -90;
-  const GAUGE_MAX    =  90;
+  const STATION    = "30336";
+  const THRESHOLD  = 30;
+  const GAUGE_MIN  = -90;
+  const GAUGE_MAX  =  90;
+  const BASE_URL   = "https://opendataapi.dmi.dk/v2/oceanObs/collections/observation/items";
 
-  // ── Fetch helpers ──────────────────────────────────────────────────────────
-
-  async function fetchLatest() {
-    const url = new URL(
-      "http://opendataapi.dmi.dk/v2/oceanObs/collections/observation/items"
-    );
-    url.searchParams.set("stationId",   STATION_ID);
-    url.searchParams.set("parameterId", "sealev_dvr");
-    url.searchParams.set("limit",       "1");
-    url.searchParams.set("sortorder",   "observed,desc");
+  async function apiFetch(params) {
+    const url = new URL(BASE_URL);
+    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    return res.json();
+  }
+
+  async function fetchLatest() {
+    const data = await apiFetch({ stationId: STATION, parameterId: "sealev_dvr", limit: "1" });
     return data.features[0];
   }
 
   async function fetchHistory() {
-    // 144 observations × 10-min interval = ~24 h
-    const url = new URL(
-      "http://opendataapi.dmi.dk/v2/oceanObs/collections/observation/items"
+    const data = await apiFetch({ stationId: STATION, parameterId: "sealev_dvr", limit: "144" });
+    // Sort oldest → newest for the chart
+    return data.features.sort((a, b) =>
+      new Date(a.properties.observed) - new Date(b.properties.observed)
     );
-    url.searchParams.set("stationId",   STATION_ID);
-    url.searchParams.set("parameterId", "sealev_dvr");
-    url.searchParams.set("limit",       "144");
-    url.searchParams.set("sortorder",   "observed,asc");
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return data.features;
   }
 
-  // ── UI helpers ─────────────────────────────────────────────────────────────
-
-  function statusFor(cm) {
-    if (cm >  THRESHOLD_CM) return { label: "HIGH ▲",  cls: "status-high"   };
-    if (cm < -THRESHOLD_CM) return { label: "LOW ▼",   cls: "status-low"    };
-    return                         { label: "NORMAL ✓", cls: "status-normal" };
-  }
-
-  function levelColor(cm) {
-    if (cm >  THRESHOLD_CM) return "#f87171";
-    if (cm < -THRESHOLD_CM) return "#c084fc";
-    return "#34d399";
-  }
-
-  function updateGauge(cm) {
-    const pct = (cm - GAUGE_MIN) / (GAUGE_MAX - GAUGE_MIN) * 100;
-    const clamped = Math.max(0, Math.min(100, pct));
-    document.getElementById("gauge-needle").style.left = clamped + "%";
-  }
-
-  function formatTime(isoString) {
-    const d = new Date(isoString);
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-
-  // ── Chart ──────────────────────────────────────────────────────────────────
-
-  let chartInstance = null;
+  let chartInst = null;
 
   function buildChart(features) {
-    const labels = features.map(f => formatTime(f.properties.observed));
+    const labels = features.map(f => {
+      const d = new Date(f.properties.observed);
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    });
     const values = features.map(f => f.properties.value);
+    const high24 = Math.max(...values);
+    const low24  = Math.min(...values);
+
+    document.getElementById("stat-high").textContent = high24.toFixed(1) + " CM";
+    document.getElementById("stat-low").textContent  = low24.toFixed(1)  + " CM";
 
     const ctx = document.getElementById("chart").getContext("2d");
+    if (chartInst) chartInst.destroy();
 
-    if (chartInstance) chartInstance.destroy();
-
-    chartInstance = new Chart(ctx, {
+    chartInst = new Chart(ctx, {
       type: "line",
       data: {
         labels,
         datasets: [{
           data: values,
-          borderColor: "#8ecae6",
-          backgroundColor: "rgba(142, 202, 230, 0.08)",
+          borderColor: "#00ff87",
+          backgroundColor: "rgba(0,255,135,0.06)",
           borderWidth: 2,
           pointRadius: 0,
           tension: 0.3,
@@ -343,53 +430,46 @@
       },
       options: {
         responsive: true,
+        animation: { duration: 600 },
         interaction: { mode: "index", intersect: false },
         plugins: {
           legend: { display: false },
           tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.parsed.y.toFixed(1)} cm`,
-            },
+            backgroundColor: "#0a1520",
+            borderColor: "#00e5ff",
+            borderWidth: 1,
+            titleFont: { family: "'Press Start 2P'", size: 9 },
+            bodyFont:  { family: "'Press Start 2P'", size: 9 },
+            callbacks: { label: c => ` ${c.parsed.y.toFixed(1)} cm` },
           },
         },
         scales: {
           x: {
-            ticks: {
-              color: "#5a8aa3",
-              maxTicksLimit: 8,
-              font: { size: 11 },
-            },
-            grid: { color: "#1e3a50" },
+            ticks: { color: "#2a6a7a", font: { family: "'Press Start 2P'", size: 7 }, maxTicksLimit: 7 },
+            grid:  { color: "#0d2030" },
           },
           y: {
-            ticks: {
-              color: "#5a8aa3",
-              font: { size: 11 },
-              callback: v => v + " cm",
-            },
-            grid: { color: "#1e3a50" },
-            // draw threshold lines
-            afterDataLimits(scale) {
-              scale.max = Math.max(scale.max,  THRESHOLD_CM + 5);
-              scale.min = Math.min(scale.min, -THRESHOLD_CM - 5);
+            ticks: { color: "#2a6a7a", font: { family: "'Press Start 2P'", size: 7 }, callback: v => v + " cm" },
+            grid:  { color: "#0d2030" },
+            afterDataLimits(s) {
+              s.max = Math.max(s.max, THRESHOLD + 8);
+              s.min = Math.min(s.min, -THRESHOLD - 8);
             },
           },
         },
       },
       plugins: [{
-        // Draw ±30 cm threshold lines
         id: "thresholds",
-        afterDraw(chart) {
-          const { ctx, scales: { y, x } } = chart;
-          [THRESHOLD_CM, -THRESHOLD_CM].forEach(val => {
-            const yPos = y.getPixelForValue(val);
+        afterDraw({ ctx, scales: { x, y } }) {
+          [THRESHOLD, -THRESHOLD].forEach(v => {
+            const yp = y.getPixelForValue(v);
             ctx.save();
-            ctx.setLineDash([6, 4]);
-            ctx.strokeStyle = "rgba(248, 113, 113, 0.5)";
-            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 4]);
+            ctx.strokeStyle = "rgba(255,60,95,0.55)";
+            ctx.lineWidth   = 1.5;
             ctx.beginPath();
-            ctx.moveTo(x.left, yPos);
-            ctx.lineTo(x.right, yPos);
+            ctx.moveTo(x.left, yp);
+            ctx.lineTo(x.right, yp);
             ctx.stroke();
             ctx.restore();
           });
@@ -398,7 +478,53 @@
     });
   }
 
-  // ── Main ───────────────────────────────────────────────────────────────────
+  function updateGauge(cm) {
+    const pct = Math.max(0, Math.min(100, (cm - GAUGE_MIN) / (GAUGE_MAX - GAUGE_MIN) * 100));
+    const needle = document.getElementById("gauge-needle");
+    const fill   = document.getElementById("gauge-fill");
+    needle.style.left = pct + "%";
+
+    // Fill from centre (50%) to needle
+    const centre = 50;
+    if (pct >= centre) {
+      fill.style.left  = centre + "%";
+      fill.style.width = (pct - centre) + "%";
+    } else {
+      fill.style.left  = pct + "%";
+      fill.style.width = (centre - pct) + "%";
+    }
+  }
+
+  function applyStatus(cm) {
+    const el  = document.getElementById("level-val");
+    const chip = document.getElementById("status-chip");
+    const fill  = document.getElementById("gauge-fill");
+
+    chip.className = "status-chip";
+
+    if (cm > THRESHOLD) {
+      el.style.color      = "var(--red)";
+      el.style.textShadow = "0 0 20px var(--red), 0 0 60px rgba(255,60,95,0.3)";
+      fill.style.background = "repeating-linear-gradient(90deg, var(--red) 0px, var(--red) 6px, transparent 6px, transparent 8px)";
+      chip.textContent = "!! LEVEL HIGH !!";
+      chip.classList.add("high");
+    } else if (cm < -THRESHOLD) {
+      el.style.color      = "var(--purple)";
+      el.style.textShadow = "0 0 20px var(--purple), 0 0 60px rgba(192,64,251,0.3)";
+      fill.style.background = "repeating-linear-gradient(90deg, var(--purple) 0px, var(--purple) 6px, transparent 6px, transparent 8px)";
+      chip.textContent = "!! LEVEL LOW !!";
+      chip.classList.add("low");
+    } else {
+      el.style.color      = "var(--green)";
+      el.style.textShadow = "0 0 20px var(--green), 0 0 60px rgba(0,255,135,0.3)";
+      fill.style.background = "repeating-linear-gradient(90deg, var(--green) 0px, var(--green) 6px, transparent 6px, transparent 8px)";
+      chip.textContent = "▶ LEVEL NORMAL ◀";
+    }
+  }
+
+  function show(id) {
+    document.getElementById(id).classList.remove("hidden");
+  }
 
   async function load() {
     try {
@@ -406,47 +532,30 @@
 
       const cm = latest.properties.value;
       const ts = latest.properties.observed;
-      const { label, cls } = statusFor(cm);
-      const color = levelColor(cm);
 
-      // Level display
-      document.getElementById("level-value").textContent = cm.toFixed(1);
-      document.getElementById("level-value").style.color = color;
-
-      // Badge
-      const badge = document.getElementById("status-badge");
-      badge.textContent = label;
-      badge.className   = "status-badge " + cls;
-
-      // Gauge
+      document.getElementById("level-val").textContent = cm.toFixed(1);
+      applyStatus(cm);
       updateGauge(cm);
-
-      // Chart
       buildChart(history);
 
-      // Timestamps
-      const now  = new Date();
-      const obs  = new Date(ts);
-      document.getElementById("last-updated").textContent =
-        `Observation: ${obs.toLocaleString()} · Page refreshed: ${now.toLocaleTimeString()}`;
+      document.getElementById("ts-obs").textContent  = "LAST OBSERVATION: " + new Date(ts).toLocaleString().toUpperCase();
+      document.getElementById("ts-page").textContent = "PAGE REFRESHED:   " + new Date().toLocaleTimeString().toUpperCase();
 
-      // Show UI
-      document.getElementById("spinner").style.display    = "none";
-      document.getElementById("card").style.display       = "";
-      document.getElementById("chart-wrap").style.display = "";
-      document.getElementById("footer").style.display     = "";
+      document.getElementById("loading").style.display = "none";
+      show("level-card");
+      show("stats-row");
+      show("chart-card");
+      show("footer");
 
     } catch (err) {
       console.error(err);
-      document.getElementById("spinner").style.display    = "none";
-      document.getElementById("error-msg").style.display  = "";
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("error-box").style.display = "";
     }
   }
 
   load();
-  // Auto-refresh every 10 minutes
   setInterval(load, 10 * 60 * 1000);
 </script>
-
 </body>
 </html>

@@ -131,23 +131,20 @@ def main():
     # 4. Send a message only when the state *changes*
     if is_alert and not was_alert:
         # Threshold just crossed — send warning
-        direction = "HIGH 📈" if is_high else "LOW 📉"
+        direction = "above the upper" if is_high else "below the lower"
         message = (
-            f"⚠️ <b>WATER LEVEL ALERT — COPENHAGEN</b>\n\n"
-            f"The water level at Langelinie is currently <b>{level_cm:.1f} cm</b> "
-            f"(DVR90) — that is <b>{direction}</b>.\n\n"
-            f"Threshold: ±{THRESHOLD_CM} cm\n"
+            f"Hello, here is the current water level in Copenhagen: <b>{level_cm:.1f} cm</b>.\n\n"
+            f"⚠️ <b>WARNING:</b> The level is {direction} threshold of ±{THRESHOLD_CM} cm.\n\n"
             f"🕐 {format_timestamp()}"
         )
         send_telegram(message)
-        print(f"Alert sent: level={level_cm:.1f} cm, direction={direction}")
+        print(f"Alert sent: level={level_cm:.1f} cm")
 
     elif not is_alert and was_alert:
         # Level returned to normal — send all-clear
         message = (
-            f"✅ <b>ALL CLEAR — COPENHAGEN WATER LEVEL</b>\n\n"
-            f"The water level at Langelinie has returned to normal.\n"
-            f"Current level: <b>{level_cm:.1f} cm</b> (DVR90)\n\n"
+            f"Hello, here is the current water level in Copenhagen: <b>{level_cm:.1f} cm</b>.\n\n"
+            f"✅ The level has returned to normal (within ±{THRESHOLD_CM} cm).\n\n"
             f"🕐 {format_timestamp()}"
         )
         send_telegram(message)
