@@ -63,12 +63,11 @@ def get_water_level_cm() -> float:
     Fetch the latest sea-level observation from the DMI Open Data API.
     No API key required. Returns the value in centimetres relative to DVR90.
     """
-    url = "http://opendataapi.dmi.dk/v2/oceanObs/collections/observation/items"
+    url = "https://opendataapi.dmi.dk/v2/oceanObs/collections/observation/items"
     params = {
         "stationId":   STATION_ID,
         "parameterId": "sealev_dvr",   # Sea level relative to DVR90 (centimetres)
-        "limit":       1,
-        "sortorder":   "observed,desc",
+        "limit":       10,
     }
 
     response = requests.get(url, params=params, timeout=30)
@@ -82,6 +81,8 @@ def get_water_level_cm() -> float:
             "Check that the station ID is correct."
         )
 
+    # Sort client-side to get the most recent observation
+    features.sort(key=lambda f: f["properties"].get("observed", ""), reverse=True)
     return features[0]["properties"]["value"]   # already in centimetres
 
 
