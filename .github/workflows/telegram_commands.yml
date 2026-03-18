@@ -1,18 +1,17 @@
-name: Water Level Check
+name: Telegram Commands
 
 on:
-  # Run automatically every 3 hours
+  # Check for /update commands every 5 minutes
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "*/5 * * * *"
 
-  # Also allow you to trigger it manually from the GitHub website
+  # Also allow manual trigger
   workflow_dispatch:
 
 jobs:
-  check:
+  commands:
     runs-on: ubuntu-latest
 
-    # Allow the job to commit the updated state.json back to the repo
     permissions:
       contents: write
 
@@ -28,17 +27,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run water level check
+      - name: Handle Telegram commands
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
+        run: python main.py --commands
 
       - name: Save updated state back to repository
         run: |
           git config user.name  "Water Level Bot"
           git config user.email "bot@users.noreply.github.com"
           git add state.json
-          # Only commit if state.json actually changed
-          git diff --staged --quiet || git commit -m "chore: update water level state [skip ci]"
+          git diff --staged --quiet || git commit -m "chore: update bot state [skip ci]"
           git push
