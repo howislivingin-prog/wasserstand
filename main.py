@@ -1,32 +1,23 @@
 """
-Copenhagen Water Level & Water Quality Alert Bot
--------------------------------------------------
+Copenhagen Water Level Alert Bot
+---------------------------------
 Fetches the current sea level at Copenhagen (Langelinie station) from the
 Danish Meteorological Institute (DMI) Open Data API (no API key required)
-and sends a Telegram warning whenever the level rises above or drops below
-the set threshold.
-
-Also checks bathing water quality for the beach nearest to Sluseholmen
-using the DHI Vandudsigten API (no API key required) and sends a warning
-when swimming is not recommended.
+and sends a Telegram warning message whenever the level rises above or
+drops below the set threshold.
 
 Run modes:
-  python main.py               — water level check + water quality check
+  python main.py               — water level check + alert
   python main.py --commands    — respond to /update commands in Telegram
 """
 
 import json
-import math
 import os
 import sys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import urllib3
 import requests
-
-# Suppress SSL warnings for the water quality API (server has TLS issues)
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ---------------------------------------------------------------------------
 # Configuration — these values come from GitHub Secrets
@@ -39,21 +30,6 @@ STATION_ID = "30336"
 
 # Alert when the water level goes above or below this threshold (cm, DVR90)
 THRESHOLD_CM = 5
-
-# Sluseholmen coordinates — used to find the nearest bathing beach
-SLUSEHOLMEN_LAT = 55.656
-SLUSEHOLMEN_LON = 12.528
-
-# Water quality API (DHI Vandudsigten / badevand.dk — no API key required)
-WATER_QUALITY_API_URL = "http://api.vandudsigten.dk/beaches/"
-
-# Quality scale: 1 = excellent, 2 = good, 3 = poor (red flag), 4 = no data
-WATER_QUALITY_LABELS = {
-    1: "🟢 Excellent — safe to swim",
-    2: "🟢 Good — safe to swim",
-    3: "🔴 Poor — swimming not recommended",
-    4: "⬛ No data available",
-}
 
 # File that stores the last known state (committed back to the repo)
 STATE_FILE = "state.json"
@@ -68,23 +44,13 @@ def load_state() -> dict:
     try:
         with open(STATE_FILE, "r") as f:
             state = json.load(f)
-        # Ensure all expected keys exist (handles old state files)
         state.setdefault("is_alert", False)
         state.setdefault("last_level_cm", None)
         state.setdefault("last_updated", None)
         state.setdefault("last_update_id", None)
-        state.setdefault("is_water_quality_alert", False)
-        state.setdefault("last_water_quality", None)
         return state
     except (FileNotFoundError, json.JSONDecodeError):
-        return {
-            "is_alert": False,
-            "last_level_cm": None,
-            "last_updated": None,
-            "last_update_id": None,
-            "is_water_quality_alert": False,
-            "last_water_quality": None,
-        }
+        return {"is_alert": False, "last_level_cm": None, "last_updated": None, "last_update_id": None}
 
 
 def save_state(state: dict) -> None:
@@ -112,10 +78,6 @@ def send_telegram(message: str, chat_id: str = None) -> None:
     print("Telegram message sent successfully.")
 
 
-# ---------------------------------------------------------------------------
-# Water level
-# ---------------------------------------------------------------------------
-
 def get_water_level_cm() -> float:
     """
     Fetch the latest sea-level observation from the DMI Open Data API.
@@ -136,10 +98,33 @@ def get_water_level_cm() -> float:
     return features[0]["properties"]["value"]
 
 
-def run_water_level_check(state: dict) -> dict:
-    """Check water level, send alerts if needed, and return updated state."""
+def build_status_message(level_cm: float) -> str:
+    """Build a status message for the current water level."""
+    is_high  = level_cm >  THRESHOLD_CM
+    is_low   = level_cm < -THRESHOLD_CM
+    is_alert = is_high or is_low
+
+    if is_alert:
+        direction = "above the upper" if is_high else "below the lower"
+        status_line = f"⚠️ The level is {direction} threshold of ±{THRESHOLD_CM} cm."
+    else:
+        status_line = f"✅ Normal (within ±{THRESHOLD_CM} cm)."
+
+    return (
+        f"🌊 <b>Sea level:</b> {level_cm:.1f} cm\n"
+        f"{status_line}\n\n"
+        f"🕐 {format_timestamp()}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Water level alert logic
+# ---------------------------------------------------------------------------
+
+def run_water_level_check():
     print(f"=== Copenhagen Water Level Check — {format_timestamp()} ===")
 
+    state = load_state()
     was_alert = state.get("is_alert", False)
     print(f"Previous state: alert={was_alert}, level={state.get('last_level_cm')} cm")
 
@@ -182,135 +167,7 @@ def run_water_level_check(state: dict) -> dict:
     state["is_alert"] = is_alert
     state["last_level_cm"] = round(level_cm, 1)
     state["last_updated"] = datetime.now(timezone.utc).isoformat()
-    return state
-
-
-# ---------------------------------------------------------------------------
-# Water quality
-# ---------------------------------------------------------------------------
-
-def get_water_quality() -> tuple:
-    """
-    Fetch today's bathing water quality for the beach nearest to Sluseholmen.
-    Returns (quality_int, beach_name).
-    Quality: 1=excellent, 2=good, 3=poor/red flag, 4=no data.
-    """
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; WaterLevelBot/1.0)"}
-    response = requests.get(
-        WATER_QUALITY_API_URL, timeout=30, allow_redirects=True,
-        headers=headers, verify=False,
-    )
-    response.raise_for_status()
-    beaches = response.json()
-
-    # Filter to Copenhagen beaches with coordinates
-    cph_beaches = [
-        b for b in beaches
-        if b.get("municipality") == "København"
-        and b.get("latitude") and b.get("longitude")
-    ]
-    if not cph_beaches:
-        raise ValueError("No Copenhagen beaches found in water quality API.")
-
-    # Find the beach closest to Sluseholmen
-    def dist(b):
-        return math.sqrt(
-            (b["latitude"]  - SLUSEHOLMEN_LAT) ** 2 +
-            (b["longitude"] - SLUSEHOLMEN_LON) ** 2
-        )
-
-    closest    = min(cph_beaches, key=dist)
-    beach_name = closest["name"]
-
-    data = closest.get("data", [])
-    if not data or data[0].get("water_quality") == "":
-        return (4, beach_name)
-
-    return (int(data[0]["water_quality"]), beach_name)
-
-
-def run_water_quality_check(state: dict) -> dict:
-    """Check water quality, send alerts if needed, and return updated state."""
-    print(f"=== Copenhagen Water Quality Check — {format_timestamp()} ===")
-
-    was_quality_alert = state.get("is_water_quality_alert", False)
-    print(f"Previous state: water_quality_alert={was_quality_alert}, quality={state.get('last_water_quality')}")
-
-    try:
-        quality, beach_name = get_water_quality()
-    except Exception as exc:
-        print(f"ERROR fetching water quality: {exc}", file=sys.stderr)
-        sys.exit(1)
-
-    print(f"Current water quality at {beach_name}: {quality} ({WATER_QUALITY_LABELS.get(quality, '?')})")
-
-    is_quality_alert = (quality == 3)
-
-    if is_quality_alert:
-        message = (
-            f"🏊 <b>Water Quality Warning — {beach_name}</b>\n\n"
-            f"⚠️ Water quality is currently <b>POOR</b>.\n"
-            f"Swimming is not recommended.\n\n"
-            f"🕐 {format_timestamp()}"
-        )
-        send_telegram(message)
-        print(f"Water quality alert sent: quality={quality}")
-
-    elif not is_quality_alert and was_quality_alert:
-        label = WATER_QUALITY_LABELS.get(quality, "Unknown")
-        message = (
-            f"🏊 <b>Water Quality Update — {beach_name}</b>\n\n"
-            f"✅ Water quality has improved: {label}.\n"
-            f"Swimming is now safe.\n\n"
-            f"🕐 {format_timestamp()}"
-        )
-        send_telegram(message)
-        print(f"Water quality all-clear sent: quality={quality}")
-
-    else:
-        print("No water quality message sent — quality is normal.")
-
-    state["is_water_quality_alert"] = is_quality_alert
-    state["last_water_quality"] = quality
-    return state
-
-
-# ---------------------------------------------------------------------------
-# /update command response builder
-# ---------------------------------------------------------------------------
-
-def build_full_status_message() -> str:
-    """Fetch current water level + water quality and build a combined reply."""
-    lines = []
-
-    # Water level
-    try:
-        level_cm = get_water_level_cm()
-        is_high  = level_cm >  THRESHOLD_CM
-        is_low   = level_cm < -THRESHOLD_CM
-        if is_high or is_low:
-            direction = "above the upper" if is_high else "below the lower"
-            level_status = f"⚠️ The level is {direction} threshold of ±{THRESHOLD_CM} cm."
-        else:
-            level_status = f"✅ Normal (within ±{THRESHOLD_CM} cm)."
-        lines.append(f"🌊 <b>Sea level:</b> {level_cm:.1f} cm\n{level_status}")
-    except Exception as exc:
-        lines.append(f"🌊 <b>Sea level:</b> could not fetch data ({exc})")
-
-    lines.append("")
-
-    # Water quality
-    try:
-        quality, beach_name = get_water_quality()
-        quality_label = WATER_QUALITY_LABELS.get(quality, "Unknown")
-        lines.append(f"🏊 <b>Water quality at {beach_name}:</b>\n{quality_label}")
-    except Exception as exc:
-        lines.append(f"🏊 <b>Water quality:</b> could not fetch data ({exc})")
-
-    lines.append("")
-    lines.append(f"🕐 {format_timestamp()}")
-
-    return "\n".join(lines)
+    save_state(state)
 
 
 # ---------------------------------------------------------------------------
@@ -347,7 +204,8 @@ def run_command_handler():
         if text.startswith("/update"):
             print(f"Handling /update command from chat {chat_id}")
             try:
-                reply = build_full_status_message()
+                level_cm = get_water_level_cm()
+                reply = build_status_message(level_cm)
                 send_telegram(reply, chat_id=chat_id)
             except Exception as exc:
                 print(f"ERROR responding to /update: {exc}", file=sys.stderr)
@@ -364,7 +222,4 @@ if __name__ == "__main__":
     if "--commands" in sys.argv:
         run_command_handler()
     else:
-        state = load_state()
-        state = run_water_level_check(state)
-        state = run_water_quality_check(state)
-        save_state(state)
+        run_water_level_check()
