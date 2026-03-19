@@ -1,8 +1,9 @@
 {
   "is_alert": true,
-  "last_level_cm": -6.0,
-  "last_updated": "2026-03-19T21:58:49.088442+00:00",
+  "last_level_cm": -15.0,
+  "last_updated": "2026-03-19T23:05:49.197835+00:00",
   "last_update_id": 17446764,
   "is_water_quality_alert": false,
-  "last_water_quality": null
+  "last_water_quality": null,
+  "water_quality_alert": false
 }
