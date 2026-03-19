@@ -22,7 +22,11 @@ import sys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+import urllib3
 import requests
+
+# Suppress SSL warnings for the water quality API (server has TLS issues)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ---------------------------------------------------------------------------
 # Configuration — these values come from GitHub Secrets
@@ -191,7 +195,11 @@ def get_water_quality() -> tuple:
     Returns (quality_int, beach_name).
     Quality: 1=excellent, 2=good, 3=poor/red flag, 4=no data.
     """
-    response = requests.get(WATER_QUALITY_API_URL, timeout=30, allow_redirects=True)
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; WaterLevelBot/1.0)"}
+    response = requests.get(
+        WATER_QUALITY_API_URL, timeout=30, allow_redirects=True,
+        headers=headers, verify=False,
+    )
     response.raise_for_status()
     beaches = response.json()
 
