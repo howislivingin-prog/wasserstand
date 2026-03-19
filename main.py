@@ -15,6 +15,7 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -96,7 +97,8 @@ def send_telegram(message: str, chat_id: str = None) -> None:
 
 
 def format_timestamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(ZoneInfo("Europe/Copenhagen"))
+    return now.strftime("%Y-%m-%d %H:%M")
 
 
 def build_status_message(level_cm: float) -> str:
