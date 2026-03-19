@@ -12,7 +12,6 @@ jobs:
   check:
     runs-on: ubuntu-latest
 
-    # Allow the job to commit the updated state.json back to the repo
     permissions:
       contents: write
 
@@ -28,6 +27,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium
+
+      - name: Install Playwright Chromium
+        run: playwright install --with-deps chromium
+
       - name: Run water level check
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -39,6 +47,5 @@ jobs:
           git config user.name  "Water Level Bot"
           git config user.email "bot@users.noreply.github.com"
           git add state.json
-          # Only commit if state.json actually changed
           git diff --staged --quiet || git commit -m "chore: update water level state [skip ci]"
           git push
