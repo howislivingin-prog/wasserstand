@@ -274,23 +274,17 @@ def run_water_level_check():
         quality_lines = "\n".join(format_quality_line(b) for b in beaches)
 
         if is_quality_alert:
-            message = (
-                f"🏊 <b>Water Quality Warning — Copenhagen Harbour</b>\n\n"
-                f"⚠️ Poor water quality detected at:\n{quality_lines}\n\n"
-                f"🕐 {format_timestamp()}"
-            )
-            send_telegram(message)
-            print("Water quality alert sent.")
-        elif not is_quality_alert and was_quality_alert:
-            message = (
-                f"🏊 <b>Water Quality Update — Copenhagen Harbour</b>\n\n"
-                f"✅ Water quality is back to normal:\n{quality_lines}\n\n"
-                f"🕐 {format_timestamp()}"
-            )
-            send_telegram(message)
-            print("Water quality all-clear sent.")
+            header = "⚠️ Poor water quality detected at:"
         else:
-            print("Water quality: good, no message sent.")
+            header = "✅ Water quality is good at:"
+
+        message = (
+            f"🏊 <b>Water Quality — Copenhagen Harbour</b>\n\n"
+            f"{header}\n{quality_lines}\n\n"
+            f"🕐 {format_timestamp()}"
+        )
+        send_telegram(message)
+        print(f"Water quality message sent (alert={is_quality_alert}).")
 
     # --- Save state ---
     state["is_alert"]            = is_level_alert
