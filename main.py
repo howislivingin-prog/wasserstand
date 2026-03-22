@@ -29,7 +29,7 @@ TELEGRAM_CHAT_ID   = os.environ["TELEGRAM_CHAT_ID"]
 STATION_ID = "30336"
 
 # Alert when the water level goes above or below this threshold (cm, DVR90)
-THRESHOLD_CM = 5
+THRESHOLD_CM = 30
 
 # File that stores the last known state (committed back to the repo)
 STATE_FILE = "state.json"
