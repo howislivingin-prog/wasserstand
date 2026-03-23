@@ -146,21 +146,28 @@ def get_forecast() -> list[tuple[datetime, float]]:
 
 
 def get_forecast_peak(forecast: list[tuple[datetime, float]]) -> tuple[float, datetime] | None:
-    """Return (peak_cm, peak_time) for the highest absolute value in the forecast."""
+    """Return (peak_cm, peak_time) for the highest absolute value in the next 24 hours."""
     if not forecast:
         return None
-    peak_dt, peak_cm = max(forecast, key=lambda x: abs(x[1]))
+    now = datetime.now(timezone.utc)
+    window = [x for x in forecast if x[0] <= now + timedelta(hours=24)]
+    if not window:
+        return None
+    peak_dt, peak_cm = max(window, key=lambda x: abs(x[1]))
     return peak_cm, peak_dt
 
 
 def forecast_line(forecast: list[tuple[datetime, float]]) -> str:
-    """Build a one-line forecast summary for messages."""
+    """Build a one-line forecast summary for messages (next 24h peak)."""
     if not forecast:
         return ""
-    peak_cm, peak_dt = get_forecast_peak(forecast)
+    result = get_forecast_peak(forecast)
+    if not result:
+        return ""
+    peak_cm, peak_dt = result
     now = datetime.now(timezone.utc)
     hours_away = (peak_dt - now).total_seconds() / 3600
-    return f"📈 Forecast peak: <b>{peak_cm:+.1f} cm</b> in ~{hours_away:.0f}h ({format_dt(peak_dt)})"
+    return f"📈 24h forecast peak: <b>{peak_cm:+.1f} cm</b> in ~{hours_away:.0f}h ({format_dt(peak_dt)})"
 
 
 def build_status_message(level_cm: float, forecast: list[tuple[datetime, float]] | None = None) -> str:
