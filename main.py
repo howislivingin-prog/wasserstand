@@ -36,7 +36,7 @@ CPH_LON = 12.5988
 CPH_LAT = 55.7042
 
 # Alert when the water level goes above or below this threshold (cm, DVR90)
-THRESHOLD_CM = 30
+THRESHOLD_CM = 70
 
 # Send a pre-warning when forecast predicts threshold breach within this many hours
 FORECAST_WARNING_HOURS = 6
