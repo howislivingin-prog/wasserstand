@@ -1,9 +1,9 @@
 name: Water Level Check
 
 on:
-  # Run automatically every 3 hours
+  # Run automatically every 6 hours
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "0 */6 * * *"
 
   # Also allow you to trigger it manually from the GitHub website
   workflow_dispatch:
@@ -32,6 +32,12 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
+
+      - name: Handle Telegram /update commands
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py --commands
 
       - name: Save updated state back to repository
         run: |

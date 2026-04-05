@@ -7,7 +7,7 @@ and sends a Telegram warning message whenever the level rises above or
 drops below the set threshold.
 
 Also fetches the DMI DKSS storm surge forecast to warn in advance when
-the threshold is expected to be crossed within the next 6 hours.
+the threshold is expected to be crossed within the next 12 hours.
 
 Run modes:
   python main.py               — water level check + alert
@@ -36,10 +36,10 @@ CPH_LON = 12.5988
 CPH_LAT = 55.7042
 
 # Alert when the water level goes above or below this threshold (cm, DVR90)
-THRESHOLD_CM = 70
+THRESHOLD_CM = 60
 
 # Send a pre-warning when forecast predicts threshold breach within this many hours
-FORECAST_WARNING_HOURS = 6
+FORECAST_WARNING_HOURS = 12
 
 # File that stores the last known state (committed back to the repo)
 STATE_FILE = "state.json"
@@ -225,7 +225,7 @@ def run_water_level_check():
     is_alert = is_high or is_low
 
     if is_alert:
-        # Threshold already crossed — send warning (every 3h as long as in alert)
+        # Threshold already crossed — send warning (every 6h as long as in alert)
         direction = "above the upper" if is_high else "below the lower"
         fline = f"\n{forecast_line(forecast)}" if forecast else ""
         message = (
