@@ -126,7 +126,7 @@ def get_forecast() -> list[tuple[datetime, float]]:
         "parameter-name":   "sea-mean-deviation",
         "f":                "GeoJSON",
     }
-    response = requests.get(url, params=params, timeout=30)
+    response = requests.get(url, params=params, timeout=60)
     response.raise_for_status()
     features = response.json().get("features", [])
 
@@ -182,12 +182,15 @@ def build_status_message(level_cm: float, forecast: list[tuple[datetime, float]]
         status = f"✅ Normal (within ±{THRESHOLD_CM} cm)."
 
     parts = [
-        f"🌊 <b>Sea level:</b> {level_cm:.1f} cm",
+        f"📍 <b>NOW</b>",
+        f"🌊 Sea level: {level_cm:.1f} cm",
         status,
     ]
-    if forecast:
-        parts.append(forecast_line(forecast))
-    parts.append(f"🕐 {format_timestamp()}")
+    fline = forecast_line(forecast) if forecast else ""
+    if fline:
+        parts.append(f"\n📅 <b>FORECAST</b>")
+        parts.append(fline)
+    parts.append(f"\n🕐 {format_timestamp()}")
 
     return "\n".join(parts)
 

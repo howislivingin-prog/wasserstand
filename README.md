@@ -1,17 +1,30 @@
 # Copenhagen Water Level Alert Bot
 
-This bot checks the sea level at Copenhagen (Langelinie station) every hour and sends a **Telegram warning message** when the water rises above **+30 cm** or drops below **−30 cm** (relative to the DVR90 datum).
+This bot monitors the sea level at Copenhagen (Langelinie station) every **6 hours** and sends a **Telegram warning** when the water rises above **+60 cm** or drops below **−60 cm** (relative to the DVR90 datum).
 
-You will also receive an **all-clear message** once the level returns to normal.
+You can also visit the **live dashboard** at:
+👉 **https://howislivingin-prog.github.io/wasserstand**
+
+---
+
+## What it does
+
+- **⚠️ Alert** — sent when the level crosses ±60 cm
+- **✅ All-clear** — sent when the level returns to normal
+- **📢 Forecast warning** — sent up to 12 hours in advance if the DMI storm surge forecast predicts a threshold crossing
+- **📍 /update command** — type `/update` in the Telegram group at any time to get the current sea level and 24h forecast peak on demand
+
+All alerts include the current level, status, and a 24h forecast peak where available.
 
 ---
 
 ## How it works
 
-1. GitHub runs the script automatically every hour (for free, using **GitHub Actions**).
-2. The script asks the Danish Meteorological Institute (DMI) for the latest water level reading.
-3. If the level crosses the threshold **for the first time**, a Telegram message is sent.
-4. The bot remembers the last state in `state.json` so it does **not** spam you while the level stays above/below the threshold.
+1. GitHub runs the script automatically every 6 hours (for free, using **GitHub Actions**).
+2. The script fetches the latest sea level reading from the Danish Meteorological Institute (DMI).
+3. It also fetches the DMI storm surge forecast to check if a threshold breach is expected within the next 12 hours.
+4. Messages are only sent when something changes — the bot does **not** spam you while the level stays above/below the threshold.
+5. The bot's memory is stored in `state.json` and automatically saved back to this repository after each run.
 
 ---
 
@@ -89,21 +102,22 @@ GitHub Actions should already be enabled on your repository. To confirm:
 3. Click **"Run workflow"** → **"Run workflow"** (green button).
 4. Wait about 30 seconds, then click on the running job to see the output.
 
-If everything is set up correctly you will see the current water level printed in the log. If the level is outside ±30 cm, you will receive a Telegram message immediately.
+If everything is set up correctly you will see the current water level printed in the log. If the level is outside ±60 cm, you will receive a Telegram message immediately.
 
 ---
 
 ## Customising the threshold
 
-The alert threshold is **±30 cm** by default. To change it:
+The alert threshold is **±60 cm** by default. To change it:
 
 1. Open `main.py` in this repository.
 2. Find the line:
    ```python
-   THRESHOLD_CM = 30
+   THRESHOLD_CM = 60
    ```
-3. Change `30` to any number you want (e.g. `50` for ±50 cm).
+3. Change `60` to any number you want (e.g. `50` for ±50 cm).
 4. Save and push the file — the next run will use the new value.
+5. Also update the `THRESHOLD` value in `docs/index.html` to keep the website in sync.
 
 ---
 
@@ -115,11 +129,13 @@ The alert threshold is **±30 cm** by default. To change it:
 | `requirements.txt` | Python libraries needed |
 | `state.json` | Tracks the last known alert state (updated automatically) |
 | `.github/workflows/water_level_check.yml` | Tells GitHub when and how to run the script |
+| `docs/index.html` | The live dashboard website |
 
 ---
 
 ## Data source
 
 Sea level data comes from the **Danish Meteorological Institute (DMI) Open Data API v2**.
+Forecast data comes from the **DMI DKSS storm surge model**.
 Station: **Copenhagen Langelinie** (station ID `30336`).
 Values are in centimetres relative to the **DVR90** datum (Danish Vertical Reference 1990).
