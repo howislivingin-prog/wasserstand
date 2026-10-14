@@ -1,7 +1,7 @@
 {
   "is_alert": false,
-  "last_level_cm": -10.0,
-  "last_updated": "2026-10-13T22:03:27.442590+00:00",
+  "last_level_cm": -6.0,
+  "last_updated": "2026-10-14T02:34:08.798411+00:00",
   "last_update_id": 17446787,
-  "forecast_warning_sent": false
+  "forecast_warning_sent": true
 }
